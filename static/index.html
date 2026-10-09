@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Vincent's chess games</title>
+	<link rel="icon" href="pieces/wN.svg" type="image/svg+xml" />
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<main>
+		<a class="home-link" id="home-link" href="/" hidden></a>
+		<h1>Vincent's chess games</h1>
+		<p class="muted">Replay my games move by move, with comments and variations, or try your own moves on the board.</p>
+
+		<div class="toolbar">
+			<input id="search" type="search" placeholder="Search player, club, competition..." size="32" aria-label="Search games" />
+			<a class="button secondary" href="game.html">Free board</a>
+			<a class="button secondary" href="api/all-games.pgn" id="download-all">Download all (PGN)</a>
+		</div>
+
+		<div class="toolbar hidden" id="admin-bar">
+			<a class="button" href="game.html?new=1">New game</a>
+			<button class="secondary" type="button" id="import-toggle">Import PGN...</button>
+			<button class="secondary" type="button" id="logout">Log out</button>
+		</div>
+		<div class="card hidden" id="import-card">
+			<p class="small muted" style="margin-top: 0">Paste one or more games in PGN format (e.g. exported from Chess.com or Lichess). They're added as drafts; open each to check it and publish it.</p>
+			<textarea id="import-text" rows="8" spellcheck="false"></textarea>
+			<div class="toolbar">
+				<button type="button" id="import-go">Import as drafts</button>
+				<span id="import-status" class="small"></span>
+			</div>
+		</div>
+
+		<table class="games" id="games">
+			<thead>
+				<tr><th>Date</th><th>White</th><th>Black</th><th>Result</th><th class="wide">Competition</th><th class="wide">Round</th><th class="wide">Moves</th></tr>
+			</thead>
+			<tbody id="games-body"><tr><td colspan="7" class="muted">Loading...</td></tr></tbody>
+		</table>
+
+		<footer>
+			<a href="login.html" id="login-link">Admin</a>
+			<span>&middot; Pieces: cburnett (CC BY-SA 3.0) &middot; Moves: chess.js</span>
+		</footer>
+	</main>
+	<script type="module" src="index.js"></script>
+</body>
+</html>

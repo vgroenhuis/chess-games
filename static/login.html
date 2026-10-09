@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Admin login - Vincent's chess games</title>
+	<link rel="icon" href="pieces/wN.svg" type="image/svg+xml" />
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<main style="max-width: 380px; margin-top: 10vh">
+		<a class="home-link" href="./">&larr; All games</a>
+		<div class="card">
+			<h1>Admin login</h1>
+			<form id="login-form" style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px">
+				<input type="password" id="password" placeholder="Admin password" autocomplete="current-password" required />
+				<button type="submit">Log in</button>
+				<span id="login-error" class="error small"></span>
+			</form>
+		</div>
+	</main>
+	<script type="module">
+		import { $, api } from "./common.js";
+		$("login-form").addEventListener("submit", async (event) => {
+			event.preventDefault();
+			try {
+				await api("api/admin/login", { method: "POST", body: { password: $("password").value } });
+				location.href = "./";
+			} catch (err) {
+				$("login-error").textContent = err.message;
+			}
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Game - Vincent's chess games</title>
+	<link rel="icon" href="pieces/wN.svg" type="image/svg+xml" />
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<main>
+		<a class="home-link" href="./">&larr; All games</a>
+		<div class="players" id="players">Loading...</div>
+		<div class="game-meta" id="meta"></div>
+		<p class="error" id="load-error" hidden></p>
+
+		<div class="game-layout" style="margin-top: 14px">
+			<div class="board-wrap">
+				<div id="board"></div>
+				<div class="board-controls">
+					<button class="secondary" type="button" id="first" title="Start (Home)">&laquo;</button>
+					<button class="secondary" type="button" id="prev" title="Previous move (&larr;)">&lsaquo;</button>
+					<button class="secondary" type="button" id="next" title="Next move (&rarr;)">&rsaquo;</button>
+					<button class="secondary" type="button" id="last" title="End of this line (End)">&raquo;</button>
+					<button class="secondary" type="button" id="flip" title="Flip the board">Flip</button>
+				</div>
+			</div>
+
+			<div>
+				<div class="card">
+					<div class="moves" id="moves"></div>
+					<div class="current-comment" id="current-comment"></div>
+				</div>
+
+				<div class="toolbar" id="visitor-bar">
+					<span class="small muted" id="explore-note">Move the pieces to try your own ideas; they're shown in <span style="color: var(--local); font-style: italic">orange</span> and not saved.</span>
+					<button class="secondary small hidden" type="button" id="clear-local">Clear my moves</button>
+					<a class="button secondary small hidden" id="download-pgn" href="#">Download PGN</a>
+				</div>
+
+				<div class="editor card hidden" id="editor">
+					<fieldset>
+						<legend>Selected move</legend>
+						<div class="small muted" id="selected-label"></div>
+						<textarea id="comment" rows="3" placeholder="Comment after this move"></textarea>
+						<div class="nag-buttons" id="move-nags"></div>
+						<div class="nag-buttons" id="position-nags"></div>
+						<div class="toolbar" style="margin: 6px 0 0">
+							<button class="secondary small" type="button" id="promote" title="Move this variation one place up">Promote variation</button>
+							<button class="secondary small" type="button" id="mainline">Make main line</button>
+							<button class="danger small" type="button" id="delete-move">Delete from here</button>
+						</div>
+					</fieldset>
+					<fieldset>
+						<legend>Game</legend>
+						<div class="fields" id="fields"></div>
+						<label class="small" style="display: block; margin-top: 8px"><input type="checkbox" id="published" /> Published (visible to visitors)</label>
+					</fieldset>
+					<div class="toolbar">
+						<button type="button" id="save">Save</button>
+						<span id="save-status" class="small"></span>
+					</div>
+					<details>
+						<summary class="small">Load PGN into this game</summary>
+						<p class="small muted">Replaces this game's moves and details with the first game in the text. Save afterwards.</p>
+						<textarea id="pgn-text" rows="6" spellcheck="false"></textarea>
+						<div class="toolbar"><button class="secondary small" type="button" id="pgn-load">Load</button><span id="pgn-status" class="small"></span></div>
+					</details>
+					<div class="toolbar" style="justify-content: flex-end">
+						<button class="danger small" type="button" id="delete-game">Delete game</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+	<script type="module" src="game.js"></script>
+</body>
+</html>

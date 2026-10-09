@@ -1,0 +1,14 @@
+[Unit]
+Description=Vincent's chess games (FastAPI on 127.0.0.1:8200)
+After=network.target
+
+[Service]
+User=groenhuis
+Group=groenhuis
+WorkingDirectory=/home/groenhuis/chess-games
+ExecStart=/home/groenhuis/chess-games/run.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
