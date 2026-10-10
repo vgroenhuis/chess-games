@@ -52,6 +52,7 @@ input, select, textarea {
 	font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); max-width: 100%;
 }
 textarea { width: 100%; }
+input.invalid { border-color: var(--danger); outline-color: var(--danger); }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 .badge { display: inline-block; font-size: 0.75rem; padding: 1px 7px; border-radius: 10px; background: rgba(138, 90, 0, 0.15); color: var(--local); margin-left: 6px; vertical-align: middle; }
 

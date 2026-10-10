@@ -61,11 +61,34 @@ export function eventLink(name, url) {
 	return el("a", { href: url, target: "_blank", rel: "noopener", title: "Competition page (new tab)", onclick: (e) => e.stopPropagation() }, name);
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// PGN "2026.10.09" -> "Oct 9, 2026" (or "Oct 2026" / "2026" when partly unknown).
 export function fmtDate(pgnDate) {
 	if (!pgnDate) return "";
 	const [y, m, d] = pgnDate.split(".");
-	if (!y || /^\?+$/.test(y)) return "";
-	if (!m || /\?/.test(m)) return y;
-	if (!d || /\?/.test(d)) return `${y}-${m}`;
-	return `${y}-${m}-${d}`;
+	if (!y || !/^\d{4}$/.test(y)) return "";
+	const month = MONTHS[Number(m) - 1];
+	if (!month) return y;
+	if (!d || !/^\d+$/.test(d)) return `${month} ${y}`;
+	return `${month} ${Number(d)}, ${y}`;
+}
+
+// PGN "2026.10.09" -> "09-10-2026" for the editor ("" when unknown).
+export function pgnDateToInput(pgnDate) {
+	const m = /^(\d{4})\.(\d{2})\.(\d{2})$/.exec(pgnDate || "");
+	return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+}
+
+// The editor's "dd-mm-yyyy" (also d-m-yyyy, with / or .) -> PGN "yyyy.mm.dd";
+// "" for an empty field, null if it isn't a valid date.
+export function inputDateToPgn(text) {
+	const value = text.trim();
+	if (!value) return "";
+	const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(value);
+	if (!m) return null;
+	const [day, month, year] = [Number(m[1]), Number(m[2]), Number(m[3])];
+	const date = new Date(Date.UTC(year, month - 1, day));
+	if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null; // e.g. 31-02
+	return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
 }

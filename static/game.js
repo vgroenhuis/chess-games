@@ -4,7 +4,7 @@
 //   game.html          free board (game.html?fen=... starts from a position)
 //   game.html?new=1    admin: a new game
 import { Board } from "./board.js";
-import { $, displayName, el, eventLink, fetchData, fmtDate, loadSite } from "./common.js";
+import { $, displayName, el, eventLink, fetchData, fmtDate, inputDateToPgn, loadSite, pgnDateToInput } from "./common.js";
 import { deleteGame, gameIds, readGame, writeGame } from "./github.js";
 import { parsePgn, writePgn } from "./pgn.js";
 import { GameTree, MOVE_NAGS, NAG_SYMBOLS, POSITION_NAGS, START_FEN, moveLabel } from "./tree.js";
@@ -27,7 +27,7 @@ const FIELDS = [
 	["WhiteElo", "White's rating"], ["BlackElo", "Black's rating"],
 	["Event", "Competition"], ["EventURL", "Competition web page"],
 	["Round", "Round"],
-	["Date", "Date (YYYY.MM.DD)"], ["Site", "Place"],
+	["Date", "Date (dd-mm-yyyy)"], ["Site", "Place"],
 ];
 const RESULTS = [["*", "* (unfinished / unknown)"], ["1-0", "1-0"], ["0-1", "0-1"], ["1/2-1/2", "½-½"]];
 
@@ -159,7 +159,17 @@ function renderHeader() {
 function buildEditor() {
 	$("fields").replaceChildren(
 		...FIELDS.map(([key, label]) =>
-			el("label", {}, label, el("input", { dataset: { header: key }, value: headers[key] && headers[key] !== "?" && headers[key] !== "????.??.??" ? headers[key] : "", oninput: onFieldInput }))
+			el(
+				"label",
+				{},
+				label,
+				el("input", {
+					dataset: { header: key },
+					value: key === "Date" ? pgnDateToInput(headers.Date) : headers[key] && headers[key] !== "?" ? headers[key] : "",
+					placeholder: key === "Date" ? "e.g. 09-10-2026" : null,
+					oninput: onFieldInput,
+				})
+			)
 		),
 		el("label", {}, "Result", el("select", { dataset: { header: "Result" }, onchange: onFieldInput }, ...RESULTS.map(([value, label]) => el("option", { value }, label))))
 	);
@@ -170,7 +180,15 @@ function buildEditor() {
 }
 
 function onFieldInput(event) {
-	headers[event.target.dataset.header] = event.target.value.trim();
+	const key = event.target.dataset.header;
+	if (key === "Date") {
+		const pgnDate = inputDateToPgn(event.target.value);
+		event.target.classList.toggle("invalid", pgnDate === null);
+		if (pgnDate === null) return; // keep the last valid date until this one is complete
+		headers.Date = pgnDate;
+	} else {
+		headers[key] = event.target.value.trim();
+	}
 	markDirty();
 	renderHeader();
 	renderMoves();
@@ -373,6 +391,28 @@ $("prev").addEventListener("click", () => current.parent && setCurrent(current.p
 $("next").addEventListener("click", () => current.children.length && setCurrent(current.children[0]));
 $("last").addEventListener("click", () => setCurrent(tree.lastOfLine(current)));
 $("flip").addEventListener("click", () => board.flip());
+
+// Copies the board as shown to the clipboard as a PNG; where the browser can't
+// put images on the clipboard, downloads it instead.
+$("copy-png").addEventListener("click", async () => {
+	const button = $("copy-png");
+	const image = board.toPng();
+	const done = (text) => {
+		button.textContent = text;
+		setTimeout(() => (button.textContent = "Copy image"), 1500);
+	};
+	try {
+		if (!navigator.clipboard || !window.ClipboardItem) throw new Error("no image clipboard");
+		// The image as a promise, so Safari still sees the click that allowed copying.
+		await navigator.clipboard.write([new ClipboardItem({ "image/png": image })]);
+		done("Copied!");
+	} catch {
+		const move = current.parent ? `-${current.moveNumber}${current.color === "w" ? "w" : "b"}` : "";
+		const link = el("a", { href: URL.createObjectURL(await image), download: `position${move}.png` });
+		link.click();
+		done("Downloaded");
+	}
+});
 $("clear-local").addEventListener("click", () => {
 	const onLocal = tree.path(current).some((n) => n.local);
 	tree.removeLocal();

@@ -101,6 +101,72 @@ export class Board {
 		}
 	}
 
+	// The position as shown (orientation, last move, check, coordinates) as a
+	// PNG image, size x size pixels.
+	async toPng(size = 800) {
+		const sq = size / 8;
+		const canvas = document.createElement("canvas");
+		canvas.width = canvas.height = size;
+		const ctx = canvas.getContext("2d");
+		const css = getComputedStyle(this.el);
+		const light = css.getPropertyValue("--light-sq").trim() || "#f0d9b5";
+		const dark = css.getPropertyValue("--dark-sq").trim() || "#b58863";
+		const board = this.chess.board();
+		const checkSquare = this.chess.inCheck() ? this.kingSquare(this.chess.turn()) : null;
+
+		const images = {};
+		await Promise.all(
+			board.flat().filter(Boolean).map(async (p) => {
+				const key = p.color + p.type;
+				if (images[key]) return;
+				const img = new Image();
+				images[key] = img;
+				img.src = pieceSrc(p.color, p.type);
+				await img.decode();
+			})
+		);
+
+		ctx.font = `600 ${Math.round(sq * 0.17)}px system-ui, sans-serif`;
+		for (let row = 0; row < 8; row++) {
+			for (let col = 0; col < 8; col++) {
+				const file = this.flipped ? 7 - col : col;
+				const rank = this.flipped ? row + 1 : 8 - row;
+				const name = FILES[file] + rank;
+				const isLight = (file + rank) % 2 === 1;
+				const x = col * sq;
+				const y = row * sq;
+				ctx.fillStyle = isLight ? light : dark;
+				ctx.fillRect(x, y, sq, sq);
+				if (this.lastMove && (this.lastMove.from === name || this.lastMove.to === name)) {
+					ctx.fillStyle = "rgba(205, 210, 106, 0.55)";
+					ctx.fillRect(x, y, sq, sq);
+				}
+				if (name === checkSquare) {
+					const g = ctx.createRadialGradient(x + sq / 2, y + sq / 2, 0, x + sq / 2, y + sq / 2, sq * 0.7);
+					g.addColorStop(0, "rgba(255, 0, 0, 0.8)");
+					g.addColorStop(0.4, "rgba(231, 0, 0, 0.4)");
+					g.addColorStop(1, "rgba(231, 0, 0, 0)");
+					ctx.fillStyle = g;
+					ctx.fillRect(x, y, sq, sq);
+				}
+				ctx.fillStyle = isLight ? dark : light;
+				if (col === 0) {
+					ctx.textAlign = "left";
+					ctx.textBaseline = "top";
+					ctx.fillText(String(rank), x + sq * 0.05, y + sq * 0.05);
+				}
+				if (row === 7) {
+					ctx.textAlign = "right";
+					ctx.textBaseline = "bottom";
+					ctx.fillText(FILES[file], x + sq * 0.95, y + sq * 0.97);
+				}
+				const piece = board[8 - rank][file];
+				if (piece) ctx.drawImage(images[piece.color + piece.type], x, y, sq, sq);
+			}
+		}
+		return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+	}
+
 	kingSquare(color) {
 		const board = this.chess.board();
 		for (let r = 0; r < 8; r++)
