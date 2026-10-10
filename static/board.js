@@ -54,8 +54,9 @@ export class Board {
 				const name = FILES[file] + rank;
 				const cell = cells[row * 8 + col];
 				cell.dataset.square = name;
-				cell.classList.toggle("light", (file + rank) % 2 === 1);
-				cell.classList.toggle("dark", (file + rank) % 2 === 0);
+				// a1 is dark (file 0 + rank 1 is odd), so the white king starts on a dark square.
+				cell.classList.toggle("light", (file + rank) % 2 === 0);
+				cell.classList.toggle("dark", (file + rank) % 2 === 1);
 				// Coordinates along the bottom row and left column.
 				cell.dataset.rankLabel = col === 0 ? String(rank) : "";
 				cell.dataset.fileLabel = row === 7 ? FILES[file] : "";
@@ -132,7 +133,7 @@ export class Board {
 				const file = this.flipped ? 7 - col : col;
 				const rank = this.flipped ? row + 1 : 8 - row;
 				const name = FILES[file] + rank;
-				const isLight = (file + rank) % 2 === 1;
+				const isLight = (file + rank) % 2 === 0; // a1 dark, as on the board
 				const x = col * sq;
 				const y = row * sq;
 				ctx.fillStyle = isLight ? light : dark;
