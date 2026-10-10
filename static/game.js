@@ -5,7 +5,7 @@
 //   game.html?new=1    admin: a new game
 import { Board } from "./board.js";
 import { $, api, displayName, el, fmtDate, loadSite } from "./common.js";
-import { GameTree, MOVE_NAGS, NAG_SYMBOLS, POSITION_NAGS, moveLabel } from "./tree.js";
+import { GameTree, MOVE_NAGS, NAG_SYMBOLS, POSITION_NAGS, START_FEN, moveLabel } from "./tree.js";
 
 const params = new URLSearchParams(location.search);
 let gameId = params.get("id") ? Number(params.get("id")) : null;
@@ -275,6 +275,7 @@ $("save").addEventListener("click", async () => {
 			$("delete-game").disabled = false;
 		}
 		dirty = false;
+		updateAnalyzeLink();
 		status.className = "small";
 		status.style.color = "var(--ok)";
 		status.textContent = `Saved ${new Date().toLocaleTimeString()}`;
@@ -316,6 +317,43 @@ $("pgn-load").addEventListener("click", async () => {
 		status.textContent = err.message;
 	}
 });
+
+// -- Chess.com analysis -----------------------------------------------------
+
+// Chess.com's analysis board takes a PGN in its URL. A long PGN (many
+// comments and variations) would make the URL too long for some browsers and
+// servers, so then only the main line goes.
+const CHESSCOM_MAX_URL = 7000;
+
+function chesscomUrl(pgnText) {
+	return `https://www.chess.com/analysis?pgn=${encodeURIComponent(pgnText.trim())}`;
+}
+
+function mainlinePgn() {
+	const tags = [["White", headers.White], ["Black", headers.Black], ["Result", headers.Result || "*"]];
+	if (tree.root.fen !== START_FEN) tags.push(["SetUp", "1"], ["FEN", tree.root.fen]);
+	const moves = [];
+	for (let n = tree.root.children[0], first = true; n && !n.local; n = n.children[0], first = false) {
+		// Plain PGN numbering ("1." / "1..."), not the move list's display labels.
+		const number = n.color === "w" ? `${n.moveNumber}. ` : first ? `${n.moveNumber}... ` : "";
+		moves.push(number + n.san);
+	}
+	return tags.filter(([, v]) => v).map(([k, v]) => `[${k} "${v}"]`).join("\n") + `\n\n${moves.join(" ")} ${headers.Result || "*"}`;
+}
+
+async function updateAnalyzeLink() {
+	const link = $("analyze-chesscom");
+	try {
+		const response = await fetch(`api/games/${gameId}/pgn`, { cache: "no-store" });
+		if (!response.ok) return;
+		let url = chesscomUrl(await response.text());
+		if (url.length > CHESSCOM_MAX_URL) url = chesscomUrl(mainlinePgn());
+		link.href = url;
+		link.classList.remove("hidden");
+	} catch {
+		// leave the button hidden
+	}
+}
 
 // -- navigation -----------------------------------------------------------
 
@@ -368,6 +406,7 @@ async function init() {
 			editing = site.admin;
 			$("download-pgn").href = `api/games/${gameId}/pgn`;
 			$("download-pgn").classList.remove("hidden");
+			updateAnalyzeLink();
 			// The player's own perspective: show the board from Black's side when Vincent had Black.
 			if (/groenhuis/i.test(headers.Black || "") && !/groenhuis/i.test(headers.White || "")) board.flip();
 		} else if (isNew && site.admin) {
