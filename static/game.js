@@ -4,7 +4,7 @@
 //   game.html          free board (game.html?fen=... starts from a position)
 //   game.html?new=1    admin: a new game
 import { Board } from "./board.js";
-import { $, api, displayName, el, fmtDate, loadSite } from "./common.js";
+import { $, api, displayName, el, eventLink, fmtDate, loadSite } from "./common.js";
 import { GameTree, MOVE_NAGS, NAG_SYMBOLS, POSITION_NAGS, START_FEN, moveLabel } from "./tree.js";
 
 const params = new URLSearchParams(location.search);
@@ -22,7 +22,8 @@ const FIELDS = [
 	["White", "White"], ["Black", "Black"],
 	["WhiteTeam", "White's club"], ["BlackTeam", "Black's club"],
 	["WhiteElo", "White's rating"], ["BlackElo", "Black's rating"],
-	["Event", "Competition"], ["Round", "Round"],
+	["Event", "Competition"], ["EventURL", "Competition web page"],
+	["Round", "Round"],
 	["Date", "Date (YYYY.MM.DD)"], ["Site", "Place"],
 ];
 const RESULTS = [["*", "* (unfinished / unknown)"], ["1-0", "1-0"], ["0-1", "0-1"], ["1/2-1/2", "½-½"]];
@@ -142,9 +143,11 @@ function renderHeader() {
 			editing && !published ? el("span", { class: "badge" }, "draft") : null
 		)
 	);
+	const event = headers.Event && headers.Event !== "?" ? headers.Event : "";
 	const round = headers.Round && headers.Round !== "?" ? `round ${headers.Round}` : "";
 	const site = headers.Site && headers.Site !== "?" ? headers.Site : "";
-	$("meta").textContent = [headers.Event && headers.Event !== "?" ? headers.Event : "", round, fmtDate(headers.Date), site].filter(Boolean).join(" · ");
+	const parts = [event ? eventLink(event, headers.EventURL) : "", round, fmtDate(headers.Date), site].filter(Boolean);
+	$("meta").replaceChildren(...parts.flatMap((part, i) => (i ? [" · ", part] : [part])));
 	document.title = `${displayName(headers.White)} - ${displayName(headers.Black)} - Vincent's chess games`;
 }
 

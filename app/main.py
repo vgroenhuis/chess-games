@@ -158,6 +158,8 @@ def clean_headers(headers: dict) -> dict:
         out[key] = value
     if out.get("Date") and _DATE_DASHES.match(out["Date"]):
         out["Date"] = out["Date"].replace("-", ".")
+    if out.get("EventURL") and not re.fullmatch(r"https?://[^\s<>\"']+", out["EventURL"]):
+        raise api_error(400, "The competition web page must be a web address starting with https://.")
     if out.get("Result", "*") not in pgn.RESULTS and out.get("Result"):
         raise api_error(400, "Result must be 1-0, 0-1, 1/2-1/2 or *.")
     return out

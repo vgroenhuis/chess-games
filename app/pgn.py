@@ -25,7 +25,7 @@ MAX_COMMENT = 4000
 RESULTS = ("1-0", "0-1", "1/2-1/2", "*")
 # Headers the admin page edits; any other header in an imported PGN is kept.
 FIELDS = ("Event", "Site", "Date", "Round", "White", "Black", "Result",
-          "WhiteTeam", "BlackTeam", "WhiteElo", "BlackElo")
+          "WhiteTeam", "BlackTeam", "WhiteElo", "BlackElo", "EventURL")
 
 
 class GameError(ValueError):

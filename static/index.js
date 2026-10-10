@@ -1,4 +1,4 @@
-import { $, api, displayName, el, fmtDate, loadSite } from "./common.js";
+import { $, api, displayName, el, eventLink, fmtDate, loadSite } from "./common.js";
 
 let games = [];
 let admin = false;
@@ -26,7 +26,7 @@ function render() {
 				el("td", {}, player(g.white, g.white_club)),
 				el("td", {}, player(g.black, g.black_club)),
 				el("td", { class: "result" }, g.result.replace("1/2-1/2", "½-½")),
-				el("td", { class: "wide" }, g.event),
+				el("td", { class: "wide" }, eventLink(g.event, g.event_url)),
 				el("td", { class: "wide" }, g.round),
 				el("td", { class: "wide" }, Math.ceil(g.plies / 2) || "")
 			)

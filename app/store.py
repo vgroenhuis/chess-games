@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS games (
 # Listing fields, from PGN headers.
 _COLUMNS = {
     "white": "White", "black": "Black", "white_club": "WhiteTeam", "black_club": "BlackTeam",
-    "event": "Event", "round": "Round", "date": "Date", "result": "Result",
+    "event": "Event", "event_url": "EventURL", "round": "Round", "date": "Date", "result": "Result",
 }
 
 
@@ -48,6 +48,9 @@ class Store:
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            columns = {row[1] for row in self._conn.execute("PRAGMA table_info(games)")}
+            if "event_url" not in columns:  # added after the first release
+                self._conn.execute("ALTER TABLE games ADD COLUMN event_url TEXT NOT NULL DEFAULT ''")
 
     def _query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
         with self._lock:
@@ -67,7 +70,7 @@ class Store:
     def list_games(self, include_drafts: bool) -> list[dict]:
         where = "" if include_drafts else "WHERE published = 1"
         rows = self._query(
-            f"SELECT id, white, black, white_club, black_club, event, round, date, result, plies, published, "
+            f"SELECT id, white, black, white_club, black_club, event, event_url, round, date, result, plies, published, "
             f"updated_at FROM games {where} ORDER BY date DESC, id DESC"
         )
         return [dict(row) for row in rows]

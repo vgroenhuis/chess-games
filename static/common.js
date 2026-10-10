@@ -71,6 +71,12 @@ export function displayName(name) {
 	return parts.length === 2 && parts[1] ? `${parts[1]} ${parts[0]}` : name;
 }
 
+// The competition's name, linked to its web page (PGN tag EventURL) when it has one.
+export function eventLink(name, url) {
+	if (!url || !/^https?:\/\//.test(url)) return name;
+	return el("a", { href: url, target: "_blank", rel: "noopener", title: "Competition page (new tab)", onclick: (e) => e.stopPropagation() }, name);
+}
+
 export function fmtDate(pgnDate) {
 	if (!pgnDate) return "";
 	const [y, m, d] = pgnDate.split(".");
