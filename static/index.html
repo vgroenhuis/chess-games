@@ -16,7 +16,7 @@
 		<div class="toolbar">
 			<input id="search" type="search" placeholder="Search player, club, competition..." size="32" aria-label="Search games" />
 			<a class="button secondary" href="game.html">Free board</a>
-			<a class="button secondary" href="api/all-games.pgn" id="download-all">Download all (PGN)</a>
+			<a class="button secondary" href="data/all-games.pgn" id="download-all" download="vincent-chess-games.pgn">Download all (PGN)</a>
 		</div>
 
 		<div class="toolbar hidden" id="admin-bar">
@@ -24,8 +24,9 @@
 			<button class="secondary" type="button" id="import-toggle">Import PGN...</button>
 			<button class="secondary" type="button" id="logout">Log out</button>
 		</div>
+		<p class="small muted hidden" id="admin-note">Admin: saves go to GitHub; this list and the public pages show them about a minute later, once the site has rebuilt.</p>
 		<div class="card hidden" id="import-card">
-			<p class="small muted" style="margin-top: 0">Paste one or more games in PGN format (e.g. exported from Chess.com or Lichess). They're added as drafts; open each to check it and publish it.</p>
+			<p class="small muted" style="margin-top: 0">Paste one or more games in PGN format (e.g. exported from Chess.com or Lichess). They're added as drafts; open each to check it and publish it. (The repository is public, so drafts are readable on GitHub, just not listed here.)</p>
 			<textarea id="import-text" rows="8" spellcheck="false"></textarea>
 			<div class="toolbar">
 				<button type="button" id="import-go">Import as drafts</button>

@@ -4,7 +4,9 @@
 //   game.html          free board (game.html?fen=... starts from a position)
 //   game.html?new=1    admin: a new game
 import { Board } from "./board.js";
-import { $, api, displayName, el, eventLink, fmtDate, loadSite } from "./common.js";
+import { $, displayName, el, eventLink, fetchData, fmtDate, loadSite } from "./common.js";
+import { deleteGame, gameIds, readGame, writeGame } from "./github.js";
+import { parsePgn, writePgn } from "./pgn.js";
 import { GameTree, MOVE_NAGS, NAG_SYMBOLS, POSITION_NAGS, START_FEN, moveLabel } from "./tree.js";
 
 const params = new URLSearchParams(location.search);
@@ -17,6 +19,7 @@ let headers = {};
 let published = false;
 let editing = false; // admin editing this game: moves are saved
 let dirty = false;
+let sha = null; // the saved file's version on GitHub (needed to update it)
 
 const FIELDS = [
 	["White", "White"], ["Black", "Black"],
@@ -265,23 +268,24 @@ $("published").addEventListener("change", (event) => {
 $("save").addEventListener("click", async () => {
 	const status = $("save-status");
 	status.className = "small muted";
-	status.textContent = "Saving...";
-	const body = { headers, tree: tree.toJSON(), published };
+	status.textContent = "Saving to GitHub...";
+	const text = gamePgn();
+	const title = `${headers.White || "?"} - ${headers.Black || "?"}`;
 	try {
 		if (gameId) {
-			await api(`api/admin/games/${gameId}`, { method: "PUT", body });
+			sha = await writeGame(gameId, text, sha, `Update game ${gameId}: ${title}`);
 		} else {
-			({ id: gameId } = await api("api/admin/games", { method: "POST", body }));
+			const id = Math.max(0, ...(await gameIds())) + 1;
+			sha = await writeGame(id, text, null, `Add game ${id}: ${title}`);
+			gameId = id;
 			history.replaceState(null, "", `game.html?id=${gameId}`);
-			$("download-pgn").href = `api/games/${gameId}/pgn`;
-			$("download-pgn").classList.remove("hidden");
 			$("delete-game").disabled = false;
 		}
 		dirty = false;
-		updateAnalyzeLink();
+		updateLinks();
 		status.className = "small";
 		status.style.color = "var(--ok)";
-		status.textContent = `Saved ${new Date().toLocaleTimeString()}`;
+		status.textContent = `Saved ${new Date().toLocaleTimeString()}; the public site shows it in about a minute.`;
 	} catch (err) {
 		status.className = "small error";
 		status.style.color = "";
@@ -292,7 +296,7 @@ $("save").addEventListener("click", async () => {
 $("delete-game").addEventListener("click", async () => {
 	if (!gameId || !confirm("Delete this game for good?")) return;
 	try {
-		await api(`api/admin/games/${gameId}`, { method: "DELETE" });
+		await deleteGame(gameId, sha, `Delete game ${gameId}`);
 		dirty = false;
 		location.href = "./";
 	} catch (err) {
@@ -306,9 +310,9 @@ $("pgn-load").addEventListener("click", async () => {
 	status.className = "small muted";
 	status.textContent = "";
 	try {
-		const { games } = await api("api/admin/pgn", { method: "POST", body: { pgn: $("pgn-text").value, action: "parse" } });
+		const games = parsePgn($("pgn-text").value);
 		headers = games[0].headers;
-		tree = new GameTree(games[0].tree);
+		tree = games[0].tree;
 		current = tree.root;
 		buildEditor();
 		renderHeader();
@@ -344,18 +348,22 @@ function mainlinePgn() {
 	return tags.filter(([, v]) => v).map(([k, v]) => `[${k} "${v}"]`).join("\n") + `\n\n${moves.join(" ")} ${headers.Result || "*"}`;
 }
 
-async function updateAnalyzeLink() {
-	const link = $("analyze-chesscom");
-	try {
-		const response = await fetch(`api/games/${gameId}/pgn`, { cache: "no-store" });
-		if (!response.ok) return;
-		let url = chesscomUrl(await response.text());
-		if (url.length > CHESSCOM_MAX_URL) url = chesscomUrl(mainlinePgn());
-		link.href = url;
-		link.classList.remove("hidden");
-	} catch {
-		// leave the button hidden
-	}
+// The game as PGN, as it is now (the Draft tag marks unpublished games).
+function gamePgn() {
+	return writePgn(published ? headers : { ...headers, Draft: "1" }, tree);
+}
+
+// "Download PGN" and "Analyze at Chess.com", both from the game as shown.
+function updateLinks() {
+	const text = writePgn(headers, tree);
+	const download = $("download-pgn");
+	download.href = URL.createObjectURL(new Blob([text], { type: "application/x-chess-pgn" }));
+	download.download = `${[headers.Date, headers.White, headers.Black].filter((p) => p && /[^?.]/.test(p)).map((p) => p.replace(/[^A-Za-z0-9.]+/g, "-").replace(/^[-.]+|[-.]+$/g, "")).join("_") || "game"}.pgn`;
+	download.classList.remove("hidden");
+	let url = chesscomUrl(text);
+	if (url.length > CHESSCOM_MAX_URL) url = chesscomUrl(mainlinePgn());
+	$("analyze-chesscom").href = url;
+	$("analyze-chesscom").classList.remove("hidden");
 }
 
 // -- navigation -----------------------------------------------------------
@@ -399,17 +407,27 @@ document.addEventListener("keydown", (event) => {
 // -- start ----------------------------------------------------------------
 
 async function init() {
-	const site = await loadSite();
+	const site = loadSite();
 	try {
-		if (gameId) {
-			const game = await api(`api/games/${gameId}`);
+		if (gameId && site.admin) {
+			// The admin edits the file on GitHub, which may be newer than the built site.
+			const file = await readGame(gameId);
+			if (!file) throw Object.assign(new Error("Not found."), { status: 404 });
+			const game = parsePgn(file.text)[0];
+			sha = file.sha;
 			headers = game.headers;
-			published = game.published;
+			published = !["1", "true", "yes"].includes(headers.Draft);
+			delete headers.Draft;
+			tree = game.tree;
+			editing = true;
+		} else if (gameId) {
+			const game = await fetchData(`data/games/${gameId}.json`);
+			headers = game.headers;
+			published = true;
 			tree = new GameTree(game.tree);
-			editing = site.admin;
-			$("download-pgn").href = `api/games/${gameId}/pgn`;
-			$("download-pgn").classList.remove("hidden");
-			updateAnalyzeLink();
+		}
+		if (gameId) {
+			updateLinks();
 			// The player's own perspective: show the board from Black's side when Vincent had Black.
 			if (/groenhuis/i.test(headers.Black || "") && !/groenhuis/i.test(headers.White || "")) board.flip();
 		} else if (isNew && site.admin) {

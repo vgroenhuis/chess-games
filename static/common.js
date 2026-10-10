@@ -1,5 +1,8 @@
-// Shared helpers for the pages. All URLs are relative, so the app works at the
-// site root and under a prefix such as /chess/.
+// Shared helpers for the pages. All URLs are relative, so the site works at a
+// domain's root and under a path such as /chess-games/.
+
+import { HOME } from "./config.js";
+import { isAdmin } from "./github.js";
 
 export class ApiError extends Error {
 	constructor(message, status) {
@@ -8,25 +11,11 @@ export class ApiError extends Error {
 	}
 }
 
-export async function api(path, { method = "GET", body } = {}) {
-	const init = { method, credentials: "same-origin", headers: {} };
-	if (body !== undefined) {
-		init.headers["Content-Type"] = "application/json";
-		init.body = JSON.stringify(body);
-	}
-	const response = await fetch(path, init);
-	let data = null;
-	try {
-		data = await response.json();
-	} catch {
-		// not JSON
-	}
-	if (!response.ok) {
-		const detail = data && data.detail;
-		const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map((d) => d.msg).join("; ") : `Request failed (${response.status})`;
-		throw new ApiError(message, response.status);
-	}
-	return data;
+// A file the build made (data/...), as JSON or text.
+export async function fetchData(path, { text = false } = {}) {
+	const response = await fetch(path, { cache: "no-cache" });
+	if (!response.ok) throw new ApiError(response.status === 404 ? "Not found." : `Couldn't load ${path} (${response.status}).`, response.status);
+	return text ? response.text() : response.json();
 }
 
 // el("div", { class: "x", onclick: fn }, child, "text", [more])
@@ -48,20 +37,15 @@ export function el(tag, attrs = {}, ...children) {
 
 export const $ = (id) => document.getElementById(id);
 
-// The site's home page (if this deployment has one) and whether we're admin.
-export async function loadSite() {
-	try {
-		const site = await api("api/site");
-		const link = $("home-link");
-		if (link && site.home) {
-			link.href = site.home.url;
-			link.textContent = `← ${site.home.title}`;
-			link.hidden = false;
-		}
-		return site;
-	} catch {
-		return { home: null, admin: false };
+// The "back" link to the site's home page, and whether this browser is the admin's.
+export function loadSite() {
+	const link = $("home-link");
+	if (link && HOME.url) {
+		link.href = HOME.url;
+		link.textContent = `← ${HOME.title}`;
+		link.hidden = false;
 	}
+	return { admin: isAdmin() };
 }
 
 // "Groenhuis, Vincent" -> "Vincent Groenhuis" for display; PGN keeps "Last, First".

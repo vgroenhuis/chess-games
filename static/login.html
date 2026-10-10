@@ -8,25 +8,41 @@
 	<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-	<main style="max-width: 380px; margin-top: 10vh">
+	<main style="max-width: 560px; margin-top: 8vh">
 		<a class="home-link" href="./">&larr; All games</a>
 		<div class="card">
 			<h1>Admin login</h1>
+			<p class="small muted">The editor saves games to the GitHub repository, so it needs a GitHub token that may write to it. The token stays in this browser only.</p>
 			<form id="login-form" style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px">
-				<input type="password" id="password" placeholder="Admin password" autocomplete="current-password" required />
+				<input type="password" id="token" placeholder="GitHub token (github_pat_...)" autocomplete="off" spellcheck="false" required />
 				<button type="submit">Log in</button>
 				<span id="login-error" class="error small"></span>
 			</form>
+			<details style="margin-top: 14px">
+				<summary class="small">How to create the token</summary>
+				<ol class="small">
+					<li>On GitHub: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings &rarr; Developer settings &rarr; Fine-grained tokens &rarr; Generate new token</a>.</li>
+					<li>Repository access: <strong>Only select repositories</strong> &rarr; <code id="repo-name"></code>.</li>
+					<li>Permissions &rarr; Repository permissions &rarr; <strong>Contents: Read and write</strong> (nothing else).</li>
+					<li>Pick an expiry date, generate, and paste the token above.</li>
+				</ol>
+			</details>
 		</div>
 	</main>
 	<script type="module">
-		import { $, api } from "./common.js";
+		import { $ } from "./common.js";
+		import { GITHUB } from "./config.js";
+		import { checkToken, setToken } from "./github.js";
+		$("repo-name").textContent = `${GITHUB.owner}/${GITHUB.repo}`;
 		$("login-form").addEventListener("submit", async (event) => {
 			event.preventDefault();
+			$("login-error").textContent = "Checking...";
+			setToken($("token").value.trim());
 			try {
-				await api("api/admin/login", { method: "POST", body: { password: $("password").value } });
+				await checkToken();
 				location.href = "./";
 			} catch (err) {
+				setToken("");
 				$("login-error").textContent = err.message;
 			}
 		});

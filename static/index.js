@@ -1,7 +1,9 @@
-import { $, api, displayName, el, eventLink, fmtDate, loadSite } from "./common.js";
+import { $, displayName, el, eventLink, fetchData, fmtDate, loadSite } from "./common.js";
+import { gameIds, setToken, writeGame } from "./github.js";
+import { parsePgn, writePgn } from "./pgn.js";
 
 let games = [];
-let admin = false;
+const { admin } = loadSite();
 
 function player(name, club) {
 	return [displayName(name), club ? el("span", { class: "club" }, club) : null];
@@ -10,6 +12,7 @@ function player(name, club) {
 function render() {
 	const words = $("search").value.toLowerCase().split(/\s+/).filter(Boolean);
 	const shown = games.filter((g) => {
+		if (!g.published && !admin) return false;
 		const text = [g.white, g.black, g.white_club, g.black_club, g.event, g.round, g.date, g.result].join(" ").toLowerCase();
 		return words.every((w) => text.includes(w));
 	});
@@ -36,41 +39,43 @@ function render() {
 
 async function load() {
 	try {
-		const data = await api("api/games");
-		games = data.games;
-		admin = data.admin;
+		games = (await fetchData("data/index.json")).games;
 	} catch (err) {
 		$("games-body").replaceChildren(el("tr", {}, el("td", { colspan: 7, class: "error" }, err.message)));
 		return;
 	}
-	$("admin-bar").classList.toggle("hidden", !admin);
-	$("login-link").classList.toggle("hidden", admin);
 	render();
 }
 
+$("admin-bar").classList.toggle("hidden", !admin);
+$("admin-note").classList.toggle("hidden", !admin);
+$("login-link").classList.toggle("hidden", admin);
 $("search").addEventListener("input", render);
-
 $("import-toggle").addEventListener("click", () => $("import-card").classList.toggle("hidden"));
 
 $("import-go").addEventListener("click", async () => {
 	const status = $("import-status");
 	status.className = "small muted";
-	status.textContent = "Importing...";
 	try {
-		const { ids } = await api("api/admin/pgn", { method: "POST", body: { pgn: $("import-text").value, action: "import" } });
-		status.textContent = `Imported ${ids.length} game(s) as drafts.`;
+		const parsed = parsePgn($("import-text").value);
+		status.textContent = `Saving ${parsed.length} game(s) to GitHub...`;
+		let next = Math.max(0, ...(await gameIds())) + 1;
+		for (const game of parsed) {
+			const pgn = writePgn({ ...game.headers, Draft: "1" }, game.tree);
+			await writeGame(next, pgn, null, `Import game ${next}: ${game.headers.White || "?"} - ${game.headers.Black || "?"}`);
+			next++;
+		}
+		status.textContent = `Imported ${parsed.length} game(s) as drafts. They appear in this list in about a minute, once the site has rebuilt.`;
 		$("import-text").value = "";
-		load();
 	} catch (err) {
 		status.className = "small error";
 		status.textContent = err.message;
 	}
 });
 
-$("logout").addEventListener("click", async () => {
-	await api("api/admin/logout", { method: "POST" }).catch(() => {});
-	load();
+$("logout").addEventListener("click", () => {
+	setToken("");
+	location.reload();
 });
 
-loadSite();
 load();
