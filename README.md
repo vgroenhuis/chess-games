@@ -70,6 +70,11 @@ The admin mode works locally too; it saves to GitHub just the same.
 
 Vincent Groenhuis
 
+## License
+
+MIT (see [LICENSE](LICENSE)), except for the files from others: `static/vendor/chess.js` (BSD-2-Clause, its license
+in `static/vendor/chess.js.LICENSE`) and the pieces in `static/pieces/` (CC BY-SA 3.0, Colin M.L. Burnett).
+
 ## AI disclaimer
 
 Claude Code was used to write this site.
