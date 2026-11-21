@@ -41,7 +41,13 @@ async function gh(path, { method = "GET", body } = {}) {
 	});
 	const data = response.status === 204 ? null : await response.json().catch(() => null);
 	if (!response.ok) {
-		const message = response.status === 401 ? "GitHub doesn't accept the token (expired or mistyped?). Log in again." : (data && data.message) || `GitHub error ${response.status}`;
+		const raw = (data && data.message) || "";
+		const message =
+			response.status === 401
+				? "GitHub doesn't accept the token (expired or mistyped?). Log in again."
+				: response.status === 403 && /not accessible by personal access token/i.test(raw)
+					? `This token may read but not write the repository. On GitHub, edit the token: Repository access must include ${GITHUB.owner}/${GITHUB.repo}, and Contents must be "Read and write". Then save again (no new login needed).`
+					: raw || `GitHub error ${response.status}`;
 		const err = new Error(message);
 		err.status = response.status;
 		throw err;
@@ -58,7 +64,9 @@ function utf8ToBase64(text) {
 }
 const base64ToUtf8 = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), (c) => c.charCodeAt(0)));
 
-// Checks the token: it must be allowed to write to the repository.
+// Checks the token. Note: for fine-grained tokens, permissions.push reflects
+// the account's role, not the token's, so a read-only token still passes here;
+// writing then fails with a 403, which gh() explains.
 export async function checkToken() {
 	const repo = await gh("");
 	if (!repo.permissions || !repo.permissions.push) throw new Error("This token can't write to the repository: give it Contents read and write access.");
